@@ -356,7 +356,7 @@ with tab_mapa:
         hover_dict = {
             'parroquia_territorial': True,
             'area': True,
-            'personas_proyectadas_2025': ':.1f',
+            'personas_proyectadas_2025': ':.0f',
             'porcentaje_sobre_pea': ':.2f',
         }
         labels_dict = {
@@ -499,9 +499,27 @@ with tab_tabla:
         cols_tabla.append('calidad_estimacion')
         rename_dict['calidad_estimacion'] = 'Calidad'
 
+    col_personas_label = f"Personas {cat_seleccionada} (2025)"
     df_mostrar = df_filtrado[cols_tabla].rename(columns=rename_dict)
     
-    st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
+    # Formatear recuentos de personas como enteros (sin decimales) para mayor claridad visual
+    if col_personas_label in df_mostrar.columns:
+        df_mostrar[col_personas_label] = df_mostrar[col_personas_label].fillna(0).round(0).astype(int)
+    if 'Recuento Censo 2022' in df_mostrar.columns:
+        df_mostrar['Recuento Censo 2022'] = df_mostrar['Recuento Censo 2022'].fillna(0).round(0).astype(int)
+    if label_tasa in df_mostrar.columns:
+        df_mostrar[label_tasa] = df_mostrar[label_tasa].round(2)
+
+    st.dataframe(
+        df_mostrar,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            col_personas_label: st.column_config.NumberColumn(format="%d"),
+            'Recuento Censo 2022': st.column_config.NumberColumn(format="%d"),
+            label_tasa: st.column_config.NumberColumn(format="%.2f%%")
+        }
+    )
     
     csv_down = df_mostrar.to_csv(index=False).encode('utf-8-sig')
     st.download_button(
