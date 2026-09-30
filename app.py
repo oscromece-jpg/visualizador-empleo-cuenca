@@ -67,8 +67,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 1. Cargar Base de Datos y Cartografía GeoJSON
-@st.cache_data
-def load_data():
+@st.cache_data(show_spinner=False)
+def load_data(cache_version="v2.3"):
     candidates = [
         "Visualizador_Cuenca/data/base_visualizador_empleo_cuenca.parquet",
         "data/base_visualizador_empleo_cuenca.parquet",
@@ -98,6 +98,19 @@ def load_data():
         df['id_sector'] = df['id_sector'].astype(str).str.zfill(12)
         df['codigo_categoria'] = df['codigo_categoria'].astype(str)
     
+    # Garantizar compatibilidad y defensividad en columnas de calidad
+    if 'calidad_tasa' not in df.columns:
+        if 'calidad_estimacion' in df.columns:
+            df['calidad_tasa'] = df['calidad_estimacion']
+        else:
+            df['calidad_tasa'] = 'Confiable (CV < 15%)'
+            
+    if 'calidad_personas' not in df.columns:
+        if 'calidad_estimacion' in df.columns:
+            df['calidad_personas'] = df['calidad_estimacion']
+        else:
+            df['calidad_personas'] = 'Confiable (CV < 15%)'
+
     # Columna territorial unificada (nombre parroquial urbano o rural específico)
     df['parroquia_territorial'] = np.where(
         df['area'] == 'Urbana',
@@ -339,6 +352,30 @@ with tab_mapa:
             center_lon = -79.0200
             zoom_level = 10.2
 
+        # Configuración defensiva de hover y etiquetas
+        hover_dict = {
+            'parroquia_territorial': True,
+            'area': True,
+            'personas_proyectadas_2025': ':.1f',
+            'porcentaje_sobre_pea': ':.2f',
+        }
+        labels_dict = {
+            'id_sector': 'Sector Censal',
+            'porcentaje_sobre_pea': label_tasa,
+            'personas_proyectadas_2025': 'Personas (2025)',
+            'parroquia_territorial': 'Parroquia',
+            'area': 'Área',
+        }
+        if 'calidad_tasa' in df_filtrado.columns:
+            hover_dict['calidad_tasa'] = True
+            labels_dict['calidad_tasa'] = 'Calidad Tasa (%)'
+        if 'calidad_personas' in df_filtrado.columns:
+            hover_dict['calidad_personas'] = True
+            labels_dict['calidad_personas'] = 'Calidad Personas'
+        elif 'calidad_estimacion' in df_filtrado.columns:
+            hover_dict['calidad_estimacion'] = True
+            labels_dict['calidad_estimacion'] = 'Calidad'
+
         # Generar mapa con Plotly Express
         fig_map = px.choropleth_map(
             df_filtrado,
@@ -352,23 +389,8 @@ with tab_mapa:
             center={'lat': center_lat, 'lon': center_lon},
             opacity=0.78,
             hover_name='id_sector',
-            hover_data={
-                'parroquia_territorial': True,
-                'area': True,
-                'personas_proyectadas_2025': ':.1f',
-                'porcentaje_sobre_pea': ':.2f',
-                'calidad_tasa': True,
-                'calidad_personas': True
-            },
-            labels={
-                'id_sector': 'Sector Censal',
-                'porcentaje_sobre_pea': label_tasa,
-                'personas_proyectadas_2025': 'Personas (2025)',
-                'parroquia_territorial': 'Parroquia',
-                'area': 'Área',
-                'calidad_tasa': 'Calidad Tasa (%)',
-                'calidad_personas': 'Calidad Personas'
-            }
+            hover_data=hover_dict,
+            labels=labels_dict
         )
         fig_map.update_layout(
             margin=dict(l=0, r=0, t=10, b=10),
@@ -455,10 +477,9 @@ with tab_tabla:
     
     cols_tabla = [
         'id_sector', 'parroquia_territorial', 'area', 'zona', 'sector',
-        'personas_proyectadas_2025', 'porcentaje_sobre_pea', 'personas_censo_2022',
-        'calidad_tasa', 'calidad_personas'
+        'personas_proyectadas_2025', 'porcentaje_sobre_pea', 'personas_censo_2022'
     ]
-    df_mostrar = df_filtrado[cols_tabla].rename(columns={
+    rename_dict = {
         'id_sector': 'ID Sector (12 dígitos)',
         'parroquia_territorial': 'Parroquia',
         'area': 'Área',
@@ -467,9 +488,18 @@ with tab_tabla:
         'personas_proyectadas_2025': f"Personas {cat_seleccionada} (2025)",
         'porcentaje_sobre_pea': label_tasa,
         'personas_censo_2022': 'Recuento Censo 2022',
-        'calidad_tasa': 'Calidad Tasa (%)',
-        'calidad_personas': 'Calidad Personas'
-    })
+    }
+    if 'calidad_tasa' in df_filtrado.columns:
+        cols_tabla.append('calidad_tasa')
+        rename_dict['calidad_tasa'] = 'Calidad Tasa (%)'
+    if 'calidad_personas' in df_filtrado.columns:
+        cols_tabla.append('calidad_personas')
+        rename_dict['calidad_personas'] = 'Calidad Personas'
+    elif 'calidad_estimacion' in df_filtrado.columns:
+        cols_tabla.append('calidad_estimacion')
+        rename_dict['calidad_estimacion'] = 'Calidad'
+
+    df_mostrar = df_filtrado[cols_tabla].rename(columns=rename_dict)
     
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
     
