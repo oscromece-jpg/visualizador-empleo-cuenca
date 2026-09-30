@@ -357,7 +357,8 @@ with tab_mapa:
                 'area': True,
                 'personas_proyectadas_2025': ':.1f',
                 'porcentaje_sobre_pea': ':.2f',
-                'calidad_estimacion': True
+                'calidad_tasa': True,
+                'calidad_personas': True
             },
             labels={
                 'id_sector': 'Sector Censal',
@@ -365,7 +366,8 @@ with tab_mapa:
                 'personas_proyectadas_2025': 'Personas (2025)',
                 'parroquia_territorial': 'Parroquia',
                 'area': 'Área',
-                'calidad_estimacion': 'Calidad'
+                'calidad_tasa': 'Calidad Tasa (%)',
+                'calidad_personas': 'Calidad Personas'
             }
         )
         fig_map.update_layout(
@@ -453,7 +455,8 @@ with tab_tabla:
     
     cols_tabla = [
         'id_sector', 'parroquia_territorial', 'area', 'zona', 'sector',
-        'personas_proyectadas_2025', 'porcentaje_sobre_pea', 'personas_censo_2022', 'calidad_estimacion'
+        'personas_proyectadas_2025', 'porcentaje_sobre_pea', 'personas_censo_2022',
+        'calidad_tasa', 'calidad_personas'
     ]
     df_mostrar = df_filtrado[cols_tabla].rename(columns={
         'id_sector': 'ID Sector (12 dígitos)',
@@ -464,7 +467,8 @@ with tab_tabla:
         'personas_proyectadas_2025': f"Personas {cat_seleccionada} (2025)",
         'porcentaje_sobre_pea': label_tasa,
         'personas_censo_2022': 'Recuento Censo 2022',
-        'calidad_estimacion': 'Calidad'
+        'calidad_tasa': 'Calidad Tasa (%)',
+        'calidad_personas': 'Calidad Personas'
     })
     
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
@@ -490,8 +494,8 @@ with tab_ficha:
         st.markdown("""
         <div class="metric-card">
             <div class="metric-label">AUC-ROC Global PEA</div>
-            <div class="metric-value">0.9127</div>
-            <div style="font-size: 0.8rem; color: #2E7D32; font-weight: 600;">CV UPM: 0.8761</div>
+            <div class="metric-value">0.9128</div>
+            <div style="font-size: 0.8rem; color: #2E7D32; font-weight: 600;">CV UPM: 0.8763</div>
         </div>
         """, unsafe_allow_html=True)
     with fc2:
@@ -505,17 +509,17 @@ with tab_ficha:
     with fc3:
         st.markdown("""
         <div class="metric-card">
-            <div class="metric-label">Brier Score Global</div>
-            <div class="metric-value">0.1196</div>
-            <div style="font-size: 0.8rem; color: #1F4E78; font-weight: 600;">Alta precisión probabilística</div>
+            <div class="metric-label">Pseudo-R² McFadden</div>
+            <div class="metric-value">0.3783</div>
+            <div style="font-size: 0.8rem; color: #1F4E78; font-weight: 600;">Brier Score: 0.1196</div>
         </div>
         """, unsafe_allow_html=True)
     with fc4:
         st.markdown("""
         <div class="metric-card">
-            <div class="metric-label">Sectores Confiables</div>
-            <div class="metric-value">91.6%</div>
-            <div style="font-size: 0.8rem; color: #2E7D32; font-weight: 600;">CV &lt; 15% (1,955 sectores)</div>
+            <div class="metric-label">Calidad Tasa Confiable</div>
+            <div class="metric-value">94.7%</div>
+            <div style="font-size: 0.8rem; color: #2E7D32; font-weight: 600;">CV &lt; 15% (2,021 sectores)</div>
         </div>
         """, unsafe_allow_html=True)
     
