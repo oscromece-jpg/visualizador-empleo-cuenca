@@ -68,7 +68,7 @@ st.markdown("""
 
 # 1. Cargar Base de Datos y Cartografía GeoJSON
 @st.cache_data(show_spinner=False)
-def load_data(cache_version="v2.4"):
+def load_data(cache_version="v2.5"):
     candidates = [
         "Visualizador_Cuenca/data/base_visualizador_empleo_cuenca.parquet",
         "data/base_visualizador_empleo_cuenca.parquet",
@@ -98,6 +98,11 @@ def load_data(cache_version="v2.4"):
         df['id_sector'] = df['id_sector'].astype(str).str.zfill(12)
         df['codigo_categoria'] = df['codigo_categoria'].astype(str)
     
+    # Reemplazo de etiqueta para mayor claridad visual ejecutiva
+    df['categoria_label'] = df['categoria_label'].replace({
+        'Desocupación Censal Expandida (Definición CPV 2022)': 'Desocupación'
+    })
+
     # Garantizar compatibilidad y defensividad en columnas de calidad
     if 'calidad_tasa' not in df.columns:
         if 'calidad_estimacion' in df.columns:
@@ -417,25 +422,94 @@ with tab_mapa:
 # TAB 2: ANÁLISIS TERRITORIAL POR PARROQUIA
 # -------------------------------------------------------------
 with tab_parroquia:
-    df_parr_cat = df_filtrado.groupby('parroquia_territorial')['personas_proyectadas_2025'].sum().reset_index()
-    df_parr_denom = df_denom.groupby('parroquia_territorial')['personas_proyectadas_2025'].sum().reset_index()
-    df_parr = pd.merge(df_parr_cat, df_parr_denom, on='parroquia_territorial', suffixes=('_cat', '_denom'))
-    df_parr['tasa_pct'] = (df_parr['personas_proyectadas_2025_cat'] / df_parr['personas_proyectadas_2025_denom']) * 100.0
-    df_parr = df_parr.sort_values(by='tasa_pct', ascending=True)
+    is_totalizer = cat_seleccionada in [
+        'Población Total',
+        'Población Económicamente Activa (PEA)',
+        'Población Económicamente Activa Total (PEA)'
+    ]
+    
+    # Agrupación por parroquia territorial
+    df_parr_cat = df_filtrado.groupby(['parroquia_territorial', 'area']).agg(
+        n_sectores=('id_sector', 'nunique'),
+        personas_2025=('personas_proyectadas_2025', 'sum'),
+        personas_censo=('personas_censo_2022', 'sum')
+    ).reset_index()
+    
+    df_parr_denom = df_denom.groupby('parroquia_territorial')['personas_proyectadas_2025'].sum().reset_index().rename(
+        columns={'personas_proyectadas_2025': 'personas_denom'}
+    )
+    df_parr = pd.merge(df_parr_cat, df_parr_denom, on='parroquia_territorial')
+    
+    if is_totalizer:
+        tot_territorio = df_parr['personas_2025'].sum()
+        df_parr['tasa_pct'] = (df_parr['personas_2025'] / tot_territorio * 100.0) if tot_territorio > 0 else 0.0
+        label_parr_tasa = "% sobre Total del Territorio"
+    else:
+        df_parr['tasa_pct'] = np.where(
+            df_parr['personas_denom'] > 0,
+            (df_parr['personas_2025'] / df_parr['personas_denom'] * 100.0),
+            0.0
+        )
+        label_parr_tasa = label_tasa
+
+    # 1. Tabla Tabulada Ejecutiva por Parroquia
+    col_p_label = f"Personas {cat_seleccionada} (2025)"
+    df_tabla_parr = df_parr.sort_values(by='personas_2025', ascending=False).copy()
+    
+    df_tabla_parr_show = df_tabla_parr[[
+        'parroquia_territorial', 'area', 'n_sectores',
+        'personas_2025', 'tasa_pct'
+    ]].rename(columns={
+        'parroquia_territorial': 'Parroquia',
+        'area': 'Área',
+        'n_sectores': 'N° Sectores',
+        'personas_2025': col_p_label,
+        'tasa_pct': label_parr_tasa
+    })
+    
+    # Formateo como enteros
+    df_tabla_parr_show[col_p_label] = df_tabla_parr_show[col_p_label].fillna(0).round(0).astype(int)
+    df_tabla_parr_show[label_parr_tasa] = df_tabla_parr_show[label_parr_tasa].round(2)
+    
+    st.markdown(f"#### 📋 Tabulado de Distribución Parroquial: **{cat_seleccionada}**")
+    st.dataframe(
+        df_tabla_parr_show,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            col_p_label: st.column_config.NumberColumn(format="%d"),
+            label_parr_tasa: st.column_config.NumberColumn(format="%.2f%%")
+        }
+    )
+    
+    col_dl1, col_dl2 = st.columns([1, 3])
+    with col_dl1:
+        csv_parr = df_tabla_parr_show.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(
+            label="📥 Descargar tabla parroquial (CSV)",
+            data=csv_parr,
+            file_name=f"tabulado_parroquial_{cat_seleccionada.replace(' ', '_').lower()}.csv",
+            mime="text/csv"
+        )
+    
+    st.markdown("---")
+    
+    # 2. Gráfico de Barras Comparativo
+    st.markdown(f"#### 📊 Comparativo Gráfico por Parroquia ({label_parr_tasa})")
+    df_bar_sorted = df_parr.sort_values(by='tasa_pct', ascending=True)
 
     fig_bar = px.bar(
-        df_parr,
+        df_bar_sorted,
         x='tasa_pct',
         y='parroquia_territorial',
         orientation='h',
-        title=f"Porcentaje de <b>{cat_seleccionada}</b> por Parroquia ({label_tasa})",
-        labels={'tasa_pct': label_tasa, 'parroquia_territorial': 'Parroquia'},
+        labels={'tasa_pct': label_parr_tasa, 'parroquia_territorial': 'Parroquia'},
         color='tasa_pct',
         color_continuous_scale='Blues',
         text_auto='.1f'
     )
-    altura_grafico = max(450, len(df_parr) * 25)
-    fig_bar.update_layout(height=altura_grafico, margin=dict(l=10, r=20, t=40, b=20))
+    altura_grafico = max(450, len(df_bar_sorted) * 26)
+    fig_bar.update_layout(height=altura_grafico, margin=dict(l=10, r=20, t=10, b=20))
     st.plotly_chart(fig_bar, use_container_width=True)
 
 # -------------------------------------------------------------

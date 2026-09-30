@@ -124,7 +124,7 @@ La base consolidada posee **36,295 registros** ($2,135 \text{ sectores} \times 1
 | :--- | :--- | :--- | :--- | :--- |
 | **Mercado Laboral** | `1` | Empleo Adecuado/Pleno | PEA del sector | Modelo SAE Calibrado (Incertidumbre dual evaluada) |
 | **Mercado Laboral** | `2-6` | Otros Ocupados No Plenos y Subempleo (Residual PEA - EA - Desempleo) | PEA del sector | Residual Censal Calibrado |
-| **Mercado Laboral** | `7-8` | Desocupación Censal Expandida (Definición CPV 2022) | PEA del sector | Recuento Censal Calibrado |
+| **Mercado Laboral** | `7-8` | Desocupación | PEA del sector | Recuento Censal Calibrado |
 | **Mercado Laboral** | `PEA` | Población Económicamente Activa (PEA) | PEA del sector (100%) | Recuento Censal Calibrado |
 | **Demografía** | `POB_TOTAL` | Población Total | Población Total (100%) | Recuento Censal Calibrado |
 | **Demografía** | `1` | Menores de 16 años | Población Total del sector | Recuento Censal Calibrado |
@@ -140,7 +140,9 @@ La base consolidada posee **36,295 registros** ($2,135 \text{ sectores} \times 1
 | **Educación** | `7` | Superior universitario | PEA del sector | Recuento Censal Calibrado |
 | **Educación** | `8` | Posgrado | PEA del sector | Recuento Censal Calibrado |
 
-*Nota Metodológica:* Cada fila de la base incluye la columna explícita `universo_denominador` para clarificar si la tasa se calcula sobre la **PEA** o sobre la **Población Total**. Asimismo, en los archivos tabulares se preserva la columna `personas_censo_2022` rotulada conceptualmente como *"Línea Base Censal Estimada 2022"*.
+*Notas Metodológicas:*
+1. **Definición de Desocupación en el Visualizador:** Corresponde a la población en condición de desocupación censal (abierta y oculta) identificada en el Censo de Población y Vivienda 2022 (`CONDACT in [7, 8]`), expandida y actualizada al marco demográfico de 2025. Se presenta con la etiqueta ejecutiva *"Desocupación"* para optimizar la legibilidad visual. No debe confundirse con la tasa de desempleo coyuntural de la encuesta muestral continua ENEMDU, pues refleja la inactividad laboral temporal registrada durante la semana de empadronamiento censal.
+2. **Universos de Referencia:** Cada fila de la base incluye la columna explícita `universo_denominador` para clarificar si la tasa se calcula sobre la **PEA** (en Mercado Laboral y Educación) o sobre la **Población Total** (en Grupos de Edad). Asimismo, en los archivos tabulares se preserva la columna `personas_censo_2022` rotulada conceptualmente como *"Línea Base Censal Estimada 2022"*.
 
 ---
 
