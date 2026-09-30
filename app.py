@@ -68,7 +68,7 @@ st.markdown("""
 
 # 1. Cargar Base de Datos y Cartografía GeoJSON
 @st.cache_data(show_spinner=False)
-def load_data(cache_version="v2.3"):
+def load_data(cache_version="v2.4"):
     candidates = [
         "Visualizador_Cuenca/data/base_visualizador_empleo_cuenca.parquet",
         "data/base_visualizador_empleo_cuenca.parquet",
@@ -110,6 +110,14 @@ def load_data(cache_version="v2.3"):
             df['calidad_personas'] = df['calidad_estimacion']
         else:
             df['calidad_personas'] = 'Confiable (CV < 15%)'
+
+    # Mapeo exacto de los 3 sectores urbanos colectivos a su parroquia urbana real por zona censal
+    map_flotantes = {
+        '010150032888': 'BELLAVISTA',
+        '010150054888': 'EL SAGRARIO',
+        '010150084888': 'HUAYNA CAPAC'
+    }
+    df['parroquia_detalle'] = df['id_sector'].map(map_flotantes).fillna(df['parroquia_detalle'])
 
     # Columna territorial unificada (nombre parroquial urbano o rural específico)
     df['parroquia_territorial'] = np.where(
